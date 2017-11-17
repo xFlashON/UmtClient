@@ -253,6 +253,10 @@
                         }
                     };
 
+                var refPoints = new Array;
+                var refDevs = new Array;
+                var refDepots = new Array;
+
                 $scope.server = localStorage.getItem("server");
                 $scope.login = localStorage.getItem("login");
                 $scope.password = localStorage.getItem("password");
@@ -694,15 +698,26 @@
 
                 function convertRouteString(str) {
 
+                    var tst = getPoint(21);
+
                     str.startTime = new Date(Date.parse(str.startTime)).toLocaleString();
                     str.endTime = new Date(Date.parse(str.startTime)).toLocaleString();
 
                 };
 
-                function getReferences() {
+                async function getPoint(id){
 
+                    if (refPoints[id] == undefined) {
+                        var res = await $http.get($scope.server + "/routes/api/RefTarget/" + id, config);
 
+                        if (res.data != undefined) {
+                            refPoints[id] = res.data;
+                        }
+                        else
+                            return undefined;
+                    }
 
+                    return refPoints[id];
                 }
 
             });
