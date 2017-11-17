@@ -11,7 +11,7 @@
 </head>
 <body class="h-100" ng-controller="Controller">
 
-    <div class="container bg-light h-100">
+    <div class="container bg-light h-100 mw-100">
 
         <header class="navbar bg-warning">
             <ul class="nav nav-pills mb-2" id="pills-tab" role="tablist">
@@ -183,8 +183,8 @@
                             
                             <span>Дата</span>
                             <input type="date" ng-model="routeDate" />
-                            <button ng-click="cmdSearchRoutes">Поиск</button>
-                            <label class="mr2" for="searchRouteCode">Номер</label>
+                            <button ng-click="currentPageRoutes = undefined; reloadRoutes()">Поиск</button>
+                            <label class="mr-2" for="searchRouteCode">Номер</label>
                             <input type="text" id="searchRouteCode" />
                             <button ng-click="searchRouteCode = '';cmdSearchRoute(searchRouteCode)">x</button>
                             <button ng-click="cmdSearchPoint(searchRouteCode)">Найти</button>
@@ -201,15 +201,18 @@
 
                     </div>
                     
-                    <table class="table table-striped table-bordered h-50">
+                    <table class="table table-striped table-bordered">
 
                         <tr>
 
                             <th>Ид</th>
                             <th>Код клиента</th>
-                            <th>Описание</th>
                             <th>Начало</th>
                             <th>Окончание</th>
+                            <th>Автомобиль</th>
+                            <th>Км.</th>
+                            <th>Подразделение</th>
+                            <th>Статус</th>
 
                         </tr>
 
@@ -217,15 +220,16 @@
 
                             <td>{{route.id}}</td>
                             <td>{{route.clntId}}</td>
-                            <td>{{route.clntDescription}}</td>
                             <td>{{route.startTime}}</td>
                             <td>{{route.endTime}}</td>
-
+                            <td>{{route.Vehicle.code}}</td>
+                            <td>{{route.gpsKm}}</td>
+                            <td>{{route.Department.description}}</td>
+                            <td>{{route.status}}</td>
+                             
                         </tr>
 
                     </table>
-                    
-                
 
                 </div>
 
@@ -255,11 +259,13 @@
 
                 var refPoints = new Array;
                 var refDevs = new Array;
-                var refDepots = new Array;
+                var refDepartments = new Array;
 
                 $scope.server = localStorage.getItem("server");
                 $scope.login = localStorage.getItem("login");
                 $scope.password = localStorage.getItem("password");
+
+                $scope.routeDate = new Date();
 
                 if ($scope.server == null)
                     $scope.server = "http://212.83.134.49:8080";
@@ -560,8 +566,15 @@
                         $scope.countPageRoutes = 1;
                     }
 
-                    if ($scope.currentPageRoutes == undefined)
-                        $scope.currentPageRoutes = $scope.server + "/routes/api/Route";
+                    if ($scope.currentPageRoutes == undefined) {
+                        if ($scope.routeDate == undefined)
+                            $scope.currentPageRoutes = $scope.server + "/routes/api/Route";
+                        else
+                            $scope.currentPageRoutes = $scope.server +
+                                "/routes/api/Route/byDate/" +
+                                $scope.routeDate.toISOString().split('T')[0];
+                    }
+
 
                     $http.get($scope.currentPageRoutes, config).then(
                         function (result) {
@@ -698,26 +711,90 @@
 
                 function convertRouteString(str) {
 
-                    var tst = getPoint(21);
-
                     str.startTime = new Date(Date.parse(str.startTime)).toLocaleString();
-                    str.endTime = new Date(Date.parse(str.startTime)).toLocaleString();
+                    str.endTime = new Date(Date.parse(str.endTime)).toLocaleString();
+                    str.Vehicle = getDev(str.devId);
+                    str.Department = getDepartment(str.startBaseId);
 
                 };
 
-                async function getPoint(id){
+                function getPoint(id) {
 
                     if (refPoints[id] == undefined) {
-                        var res = await $http.get($scope.server + "/routes/api/RefTarget/" + id, config);
 
-                        if (res.data != undefined) {
-                            refPoints[id] = res.data;
+                        refPoints[id] = {
+                            'id': "",
+                            'code': "",
+                            'description': "..."
                         }
-                        else
-                            return undefined;
+
+                        $http.get($scope.server + "/routes/api/RefTarget/" + id, config).then(
+                            function (result) {
+
+                                refPoints[id].id = result.data.id;
+                                refPoints[id].code = result.data.clntId;
+                                refPoints[id].description = result.data.clntDescription;
+
+                            });
                     }
 
                     return refPoints[id];
+
+                }
+
+                function getDev(id) {
+
+                    if (id == undefined)
+                        return undefined;
+
+                    if (refDevs[id] == undefined) {
+
+                        refDevs[id] = {
+                            'id': "",
+                            'code': "",
+                            'description': "..."
+                        }
+
+                        $http.get($scope.server + "/routes/api/RefDev/" + id, config).then(
+                            function (result) {
+
+                                refDevs[id].id = result.data.id;
+                                refDevs[id].code = result.data.clntId;
+                                refDevs[id].description = result.data.clntDescription;
+
+                            });
+                    }
+
+                    return refDevs[id];
+
+                }
+
+
+                function getDepartment(id) {
+
+                    if (id == undefined)
+                        return undefined;
+
+                    if (refDepartments[id] == undefined) {
+
+                        refDepartments[id] = {
+                            'id': "",
+                            'code': "",
+                            'description': "..."
+                        }
+
+                        $http.get($scope.server + "/routes/api/RefBase/" + id, config).then(
+                            function (result) {
+
+                                refDepartments[id].id = result.data.id;
+                                refDepartments[id].code = result.data.clntId;
+                                refDepartments[id].description = result.data.clntDescription;
+
+                            });
+                    }
+
+                    return refDepartments[id];
+
                 }
 
             });
