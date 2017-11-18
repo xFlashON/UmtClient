@@ -184,9 +184,9 @@
                             <input type="date" ng-model="routeDate" />
                             <button ng-click="currentPageRoutes = undefined; reloadRoutes()">Поиск</button>
                             <label class="mr-2" for="searchRouteCode">Номер</label>
-                            <input type="text" id="searchRouteCode" />
+                            <input type="text" id="searchRouteCode" ng-model="searchRouteCode" />
                             <button ng-click="searchRouteCode = '';cmdSearchRoute(searchRouteCode)">x</button>
-                            <button ng-click="cmdSearchPoint(searchRouteCode)">Найти</button>
+                            <button ng-click="cmdSearchRoute(searchRouteCode)">Найти</button>
 
                         </div>
 
@@ -215,7 +215,7 @@
 
                         </tr>
 
-                        <tr ng-repeat="route in routesResult">
+                        <tr ng-repeat="route in routesResult" ng-dblclick="cmdOpenRouteDetails(route)">
 
                             <td>{{route.id}}</td>
                             <td>{{route.clntId}}</td>
@@ -236,13 +236,30 @@
     </div>
 
     <div id="modalRouteDetails" class="modal p-5" role="dialog">
-        <div class="modal-dialog mw-100 bg-light h-100 w-100 p-0 m-0 border-primary rounded" role="document">
+        <div class="modal-dialog mw-100 bg-light mh-100 w-100 p-0 m-0 border-primary rounded" role="document">
             <div class="modal-content h-100">
-                <div class="modal-header">
-                    Маршрут №{{}} автомобиль:{{}} 
+                <div class="modal-header d-inline ">
+                    Маршрут №<b>{{currentRoute.clntId}}</b> автомобиль:<b>{{currentRoute.Vehicle.code}}</b>
+                    Подразделение: <b>{{currentRoute.Department.description}}</b>
+                    Посещено:{{currentRoute.gpsStartTime}}-{{currentRoute.gpsEndTime}}
                 </div>
                 <div class="modal-body">
-                    ...
+                    <table class="table table-bordered table-striped">
+                        <tr>
+                            <th>Точка доставки</th>
+                            <th>Окно с</th>
+                            <th>по</th>
+                            <th>Посещено с</th>
+                            <th>по</th>
+                        </tr>
+                        <tr ng-repeat="routePoint in routePoints">
+                            <td>{{routePoint.Point.id}},&nbsp;{{routePoint.Point.description}}</td>
+                            <td>{{routePoint.arrivalTimePlan}}</td>
+                            <td>{{routePoint.departureTimePlan}}</td>
+                            <td>{{routePoint.gpsArrivalTime}}</td>
+                            <td>{{routePoint.gpsDepartureTime}}</td>
+                        </tr>
+                    </table>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
@@ -460,36 +477,35 @@
 
                 $scope.cmdSearchPoint = function (code) {
 
-                    if (code != undefined && code !== "") {
+                    $scope.countPagePoints = 1;
 
-                        $scope.countPagePoints = 1;
-
-                        $scope.currentPagePoints = $scope.server + "/routes/api/RefTarget/byClntId/" + code.trim();
-
-                        $http.get($scope.currentPagePoints, config).then(
-                            function (result) {
-
-                                if (result.data != undefined) {
-
-                                    $scope.prevPagePoints = result.data.links.prev;
-                                    $scope.currentPagePoints = result.data.links.self;
-                                    $scope.nextPagePoints = result.data.links.next;
-
-                                    $scope.pointsResult = [result.data];
-                                }
-
-                            },
-                            function (result) {
-                                if (result.status === 404) {
-                                    $scope.pointsResult = undefined;
-                                }
-                            });
-
-                    }
-                    else {
+                    if (code === undefined || code === "") {
                         $scope.currentPagePoints = undefined;
                         $scope.reloadPoints();
-                    };
+                        return;
+                    }
+
+                    $scope.currentPagePoints = $scope.server + "/routes/api/RefTarget/byClntId/" + code.trim();
+
+                    $http.get($scope.currentPagePoints, config).then(
+                        function (result) {
+
+                            if (result.data != undefined) {
+
+                                $scope.prevPagePoints = result.data.links.prev;
+                                $scope.currentPagePoints = result.data.links.self;
+                                $scope.nextPagePoints = result.data.links.next;
+
+                                $scope.pointsResult = [result.data];
+                            }
+
+                        },
+                        function (result) {
+                            if (result.status === 404) {
+                                $scope.pointsResult = undefined;
+                            }
+                        });
+
                 };
 
                 $scope.reloadDepots = function () {
@@ -580,6 +596,9 @@
                     }
 
                     if ($scope.currentPageRoutes == undefined) {
+
+                        $scope.countPageRoutes = 1;
+
                         if ($scope.routeDate == undefined)
                             $scope.currentPageRoutes = $scope.server + "/routes/api/Route";
                         else
@@ -679,6 +698,45 @@
 
                 };
 
+                $scope.cmdSearchRoute = function (code) {
+
+                    $scope.countPageRoutes = 1;
+
+                    if (code === undefined || code === "") {
+                        $scope.currentPageRoutes = undefined;
+                        $scope.reloadRoutes();
+                        return;
+                    }
+
+                    $scope.currentPageRoutes = $scope.server + "/routes/api/Route/byClntId/" + code.trim();
+
+                    $http.get($scope.currentPageRoutes, config).then(
+                        function (result) {
+
+                            if (result.data != undefined) {
+
+                                $scope.prevPageRoutes = result.data.links.prev;
+                                $scope.currentPageRoutes = result.data.links.self;
+                                $scope.nextPageRoutes = result.data.links.next;
+
+                                var inArr = new Array(result.data);
+
+                                for (var i = 0; i < inArr.length; i++) {
+                                    convertRouteString(inArr[i]);
+                                }
+
+                                $scope.routesResult = inArr;
+                            }
+
+                        },
+                        function (result) {
+                            if (result.status === 404) {
+                                $scope.routesResult = undefined;
+                            }
+                        });
+
+                };
+
                 function updateToken() {
 
                     var method = "/auth-admin/api/login";
@@ -726,8 +784,22 @@
 
                     str.startTime = new Date(Date.parse(str.startTime)).toLocaleString();
                     str.endTime = new Date(Date.parse(str.endTime)).toLocaleString();
+                    str.gpsStartTime = str.gpsStart != null ? new Date(Date.parse(str.gpsStart)).toLocaleString() : '';
+                    str.gpsEndTime = str.gpsEnd != null ? new Date(Date.parse(str.gpsEnd)).toLocaleString() : '';
                     str.Vehicle = getDev(str.devId);
                     str.Department = getDepartment(str.startBaseId);
+
+                };
+
+                function convertRoutePointString(str, arr) {
+
+                    str.arrivalTimePlan = str.arrivalTimePlan != null ? new Date(Date.parse(str.arrivalTimePlan)).toLocaleString() : '';
+                    str.gpsArrivalTime = str.gpsArrivalTime != null ? new Date(Date.parse(str.gpsArrivalTime)).toLocaleString() : '';
+                    str.departureTimePlan = str.departureTimePlan != null ? new Date(Date.parse(str.departureTimePlan)).toLocaleString() : '';
+                    str.gpsDepartureTime = str.gpsDepartureTime != null ? new Date(Date.parse(str.gpsDepartureTime)).toLocaleString() : '';
+                    str.Point = getPoint(str.tgtId);
+
+                    arr.push(str);
 
                 };
 
@@ -808,6 +880,46 @@
 
                     return refDepartments[id];
 
+                }
+
+                $scope.cmdOpenRouteDetails = function (route) {
+
+                    if (route == undefined)
+                        return;
+
+                    $scope.currentRoute = route;
+
+                    $scope.routePoints = new Array();
+
+                    getRoutePoints(route.id);
+
+                    $("#modalRouteDetails").modal("show");
+
+                }
+
+                function getRoutePoints(id) {
+
+                    if (id == undefined)
+                        return;
+
+                    var url = $scope.server + "/routes/api/RouteTarget/byRouteId/" + id;
+
+                    recQuery(url, $scope.routePoints, convertRoutePointString);
+
+                }
+
+                function recQuery(url, array, tFunc) {
+
+                    $http.get(url, config).then(
+                        function (result) {
+
+                            for (var i = 0; i < result.data.items.length; i++)
+                                tFunc(result.data.items[i], array);
+
+                            //if (result.data.hasMore)
+                            //    recQuery(result.data.links.next, array, tFunc);
+
+                        });
                 }
 
             });
