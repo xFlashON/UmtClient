@@ -2,7 +2,7 @@
 <html class="h-100" ng-app="App">
 <head>
     <meta charset="UTF-8">
-    <title>AngularJS</title>
+    <title>Просмотр данных UMT</title>
 
     <link href="css/style.css" rel="stylesheet" />
 
@@ -916,8 +916,8 @@
                             for (var i = 0; i < result.data.items.length; i++)
                                 tFunc(result.data.items[i], array);
 
-                            //if (result.data.hasMore)
-                            //    recQuery(result.data.links.next, array, tFunc);
+                            if (result.data.hasMore)
+                                recQuery(result.data.links.next, array, tFunc);
 
                         });
                 }
